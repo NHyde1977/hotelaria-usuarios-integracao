@@ -83,18 +83,22 @@ class UsuarioRepository {
   }
 
   async create({
-    nome,
-    email,
-    senha_hash,
-    cpf,
-    data_nascimento,
-    sexo,
-    telefone,
-    status = 'ATIVO'
-  }) {
-    const id = randomUUID()
+  nome,
+  email,
+  senha_hash,
+  cpf,
+  data_nascimento,
+  sexo,
+  telefone,
+  status = 'ATIVO'
+}) {
+  const id = randomUUID()
+  const connection = await pool.getConnection()
 
-    await pool.execute(`
+  try {
+    await connection.beginTransaction()
+
+    await connection.execute(`
       INSERT INTO usuario (
         id,
         nome,
@@ -119,8 +123,25 @@ class UsuarioRepository {
       status
     ])
 
-    return this.findById(id)
+    const [resultado] = await connection.execute(`
+      INSERT INTO usuario_role (usuario_id, role_id)
+      SELECT ?, id FROM role WHERE nome = 'HOSPEDE'
+    `, [id])
+
+    if (resultado.affectedRows !== 1) {
+      throw new Error('Perfil HOSPEDE nao configurado corretamente')
+    }
+
+    await connection.commit()
+  } catch (error) {
+    await connection.rollback()
+    throw error
+  } finally {
+    connection.release()
   }
+
+  return this.findById(id)
+}
 
   async update(id, {
     nome,
