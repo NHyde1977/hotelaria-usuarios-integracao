@@ -13,7 +13,7 @@ async function start() {
     
         await app.listen({
             port,
-            host: '0.0.0.0'
+            host: '127.0.0.1'
         })
     }   catch (error) {
             app.log.error(error)
